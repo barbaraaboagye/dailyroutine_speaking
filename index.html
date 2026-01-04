@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speaking Star Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            /* SHARED THEME: Classic Game Show (Deep Blue & Gold) */
+            --primary: #FFD700;     /* Gold */
+            --secondary: #00a8ff;   /* Bright Blue */
+            --bg-dark: #001e4d;     /* Deep Royal Blue */
+            --panel-bg: #002a55;    /* Lighter Navy */
+            --text-main: #ffffff;
+            --success: #2ed573;
+            --danger: #ff4757;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; font-family: 'Segoe UI', sans-serif; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        ::-webkit-scrollbar-thumb { background: var(--secondary); border-radius: 4px; }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(circle at 50% 50%, #003366 0%, #001e4d 100%);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 30px;
+            background: rgba(0, 0, 0, 0.4);
+            border-bottom: 3px solid var(--primary);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-family: 'Arial Black', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--primary);
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.5);
+            font-size: 1.4rem;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 5px 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .stat-value { color: var(--primary); font-family: 'Courier New', monospace; font-size: 1.3rem; }
+
+        /* --- Tabs --- */
+        .tabs-container {
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding: 15px 20px;
+            background: rgba(0,0,0,0.2);
+            white-space: nowrap;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            flex-shrink: 0;
+        }
+
+        .tab-btn {
+            background: rgba(255,255,255,0.05);
+            color: #88aadd;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: 0.3s;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tab-btn:hover { background: rgba(255,255,255,0.15); color: white; }
+        .tab-btn.active {
+            background: var(--primary);
+            color: #001e4d;
+            font-weight: 900;
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+            transform: scale(1.05);
+        }
+
+        /* --- Main Stage --- */
+        .game-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+            overflow-y: auto;
+        }
+
+        /* Prompt Card */
+        .prompt-card {
+            background: linear-gradient(135deg, #004e92, #000428);
+            width: 100%;
+            min-height: 250px;
+            border: 4px solid var(--secondary);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: relative;
+            transition: transform 0.3s;
+        }
+
+        .prompt-icon { font-size: 4rem; margin-bottom: 15px; }
+        .prompt-text { font-size: 2.2rem; font-weight: bold; color: white; line-height: 1.3; }
+        .prompt-sub { font-size: 1.1rem; color: #88aadd; margin-top: 15px; font-style: italic; }
+
+        /* Tools (Timer & Rec) */
+        .tools-area {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .tool-btn {
+            width: 70px; height: 70px;
+            border-radius: 50%;
+            border: 2px solid white;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 1.8rem;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: 0.2s;
+        }
+        .tool-btn:hover { transform: scale(1.1); background: rgba(255,255,255,0.2); }
+        .tool-btn.active { background: var(--danger); border-color: var(--danger); animation: pulse 1.5s infinite; }
+
+        /* Transcript Box */
+        .transcript-wrapper {
+            width: 100%;
+            position: relative;
+            margin-bottom: 20px;
+        }
+        
+        .transcript-box {
+            width: 100%;
+            min-height: 150px;
+            max-height: 300px;
+            background: rgba(0,0,0,0.3);
+            border: 2px dashed rgba(255,255,255,0.2);
+            border-radius: 10px;
+            padding: 20px;
+            color: var(--primary);
+            font-size: 1.4rem;
+            text-align: left;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+        
+        .transcript-placeholder { color: rgba(255,255,255,0.3); font-size: 1rem; font-style: italic; display: block; text-align: center; margin-top: 40px;}
+
+        /* Transcript Actions (Clear / Read) */
+        .transcript-actions {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .mini-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid #666;
+            color: #aaa;
+            font-size: 0.8rem;
+            padding: 5px 12px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .mini-btn:hover { background: var(--secondary); color: white; border-color: var(--secondary); }
+        .mini-btn.danger:hover { background: var(--danger); border-color: var(--danger); }
+
+        /* Navigation */
+        .nav-btn {
+            padding: 15px 50px;
+            font-size: 1.5rem;
+            background: linear-gradient(45deg, var(--secondary), #0077b3);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 900;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: 0.2s;
+        }
+        .nav-btn:hover { transform: scale(1.05); filter: brightness(1.1); }
+
+        /* --- Footer --- */
+        footer {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 2px solid var(--secondary);
+            flex-shrink: 0;
+        }
+
+        .brand-text { color: rgba(255,255,255,0.8); font-size: 0.9rem; }
+        .upload-btn {
+            background: transparent; border: 1px solid rgba(255,255,255,0.3); color: #88aadd;
+            padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;
+        }
+        .upload-btn:hover { border-color: var(--secondary); color: white; }
+
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(255, 71, 87, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); } }
+
+        /* Modal Overlay (Generic) */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 100;
+            display: none; justify-content: center; align-items: center;
+        }
+        .modal-card {
+            background: var(--panel-bg); padding: 40px; border: 4px solid var(--primary);
+            border-radius: 20px; text-align: center; max-width: 500px; width: 90%;
+        }
+        
+        /* Star Rating */
+        .star-rating { font-size: 3rem; margin: 20px 0; cursor: pointer; }
+        .star { color: #444; transition: 0.2s; }
+        .star:hover, .star.active { color: var(--primary); }
+
+        @media(max-width: 600px) {
+            .prompt-text { font-size: 1.5rem; }
+            .prompt-icon { font-size: 3rem; }
+            .tool-btn { width: 50px; height: 50px; font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🎙️ Speaking Star</h1>
+    <div class="stats">
+        <div class="stat-box">
+            <span>STARS</span>
+            <span class="stat-value" id="scoreDisplay">0</span>
+        </div>
+    </div>
+</header>
+
+<!-- Tabs -->
+<div class="tabs-container" id="tabsZone"></div>
+
+<div class="game-container">
+    
+    <!-- The Card -->
+    <div class="prompt-card" id="card">
+        <div class="prompt-icon" id="cardIcon">🌅</div>
+        <div class="prompt-text" id="cardText">What time do you wake up?</div>
+        <div class="prompt-sub" id="cardHint">Use: "I usually wake up at..."</div>
+    </div>
+
+    <!-- Live Transcript -->
+    <div class="transcript-wrapper">
+        <div class="transcript-actions">
+            <button class="mini-btn" onclick="readTranscript()" title="Read Aloud">🔊 Read</button>
+            <button class="mini-btn danger" onclick="clearTranscript()" title="Clear Text">❌ Clear</button>
+        </div>
+        <div class="transcript-box" id="transcript">
+            <span class="transcript-placeholder">Click microphone to see your words...</span>
+        </div>
+    </div>
+
+    <!-- Tools -->
+    <div class="tools-area">
+        <button class="tool-btn" id="listenBtn" onclick="toggleListening()" title="Speech to Text">🎤</button>
+        <button class="tool-btn" id="recordBtn" onclick="toggleRecording()" title="Record Audio">🔴</button>
+        <button class="tool-btn" id="playBtn" onclick="playRecording()" title="Play Back" disabled style="opacity:0.5">▶️</button>
+        <button class="tool-btn" onclick="startTimer()" title="30s Timer">⏱️</button>
+    </div>
+
+    <button class="nav-btn" onclick="finishTurn()">Done / Rate</button>
+</div>
+
+<footer>
+    <div class="brand-text">JeParleEnglish 2025 | Made for learners with ❤️ | elessons14@gmail.com</div>
+    <div>
+        <label for="fileInput" class="upload-btn">📂 Upload Prompts (.txt)</label>
+        <input type="file" id="fileInput" accept=".json,.txt" style="display:none" onchange="handleFileUpload(this)">
+    </div>
+</footer>
+
+<!-- Timer Modal -->
+<div class="modal-overlay" id="timerModal">
+    <div class="modal-card">
+        <h2 style="color:var(--secondary); margin-bottom:10px;">⏳ 30s Challenge</h2>
+        <div id="timerPromptCopy" style="font-size:1.5rem; color:white; margin-bottom:20px; font-style:italic;">...</div>
+        <div id="timerCount" style="font-size: 6rem; color: var(--primary); font-weight: bold; margin: 10px 0; font-family: monospace;">30</div>
+        <button class="nav-btn" style="background: var(--danger);" onclick="stopTimer()">Stop Timer</button>
+    </div>
+</div>
+
+<!-- Rating Modal -->
+<div class="modal-overlay" id="rateModal">
+    <div class="modal-card">
+        <h2 style="color:white;">Great Job!</h2>
+        <p style="color:#aaa;">How was the speaking?</p>
+        <div class="star-rating">
+            <span class="star" onclick="rate(1)">★</span>
+            <span class="star" onclick="rate(2)">★</span>
+            <span class="star" onclick="rate(3)">★</span>
+        </div>
+        <button class="upload-btn" style="margin-top:20px; width:100%; border-color: var(--secondary);" onclick="nextCard()">Next Card →</button>
+    </div>
+</div>
+
+<script>
+    // --- Data: Daily Routine (A2/B1 Level) ---
+    // Changed to 'let' to allow overwriting with upload
+    let gameData = {
+        "Morning": [
+            { text: "What time do you wake up?", icon: "⏰", hint: "I wake up at..." },
+            { text: "What is your morning routine?", icon: "🌅", hint: "First I..., Then I..." },
+            { text: "What do you eat for breakfast?", icon: "🥣", hint: "I usually eat..." },
+            { text: "Do you brush your teeth before or after breakfast?", icon: "🪥", hint: "I brush my teeth..." },
+            { text: "How do you feel in the morning?", icon: "🥱", hint: "I feel tired/energetic..." }
+        ],
+        "School/Work": [
+            { text: "How do you get to school?", icon: "🚌", hint: "I go by..." },
+            { text: "What is your favorite subject?", icon: "📚", hint: "I like... because..." },
+            { text: "What time do you have lunch?", icon: "🥪", hint: "I have lunch at..." },
+            { text: "Do you have a lot of homework?", icon: "📝", hint: "Yes, I have..." },
+            { text: "Describe your classroom.", icon: "🏫", hint: "There are..." }
+        ],
+        "Evening": [
+            { text: "What do you do after school?", icon: "🏠", hint: "I usually..." },
+            { text: "When do you have dinner?", icon: "🍽️", hint: "We eat at..." },
+            { text: "Do you watch TV in the evening?", icon: "📺", hint: "Sometimes I watch..." },
+            { text: "What time do you go to bed?", icon: "🛌", hint: "I go to sleep at..." },
+            { text: "Do you read before sleeping?", icon: "📖", hint: "Yes/No..." }
+        ],
+        "Weekends": [
+            { text: "What time do you wake up on Saturday?", icon: "💤", hint: "I sleep until..." },
+            { text: "Do you help with chores?", icon: "🧹", hint: "I clean..." },
+            { text: "Do you meet your friends?", icon: "⚽", hint: "We play..." },
+            { text: "What is your perfect Sunday?", icon: "☀️", hint: "I like to..." },
+            { text: "Do you have homework on weekends?", icon: "🎒", hint: "I try to finish..." }
+        ]
+    };
+
+    // --- State ---
+    let currentCategory = "Morning";
+    let currentIdx = 0;
+    let totalStars = 0;
+    let recognition;
+    let mediaRecorder;
+    let audioChunks = [];
+    let audioUrl;
+    let fullTranscriptText = ""; // Store accumulated text
+    let timerIntervalVal; // Timer variable
+
+    // --- Init ---
+    function init() {
+        renderTabs();
+        loadCard();
+        setupSpeech();
+    }
+
+    function renderTabs() {
+        const zone = document.getElementById('tabsZone');
+        zone.innerHTML = '';
+        Object.keys(gameData).forEach(cat => {
+            const btn = document.createElement('button');
+            btn.className = `tab-btn ${cat === currentCategory ? 'active' : ''}`;
+            btn.textContent = cat;
+            btn.onclick = () => { currentCategory = cat; currentIdx = 0; renderTabs(); loadCard(); };
+            zone.appendChild(btn);
+        });
+    }
+
+    function loadCard() {
+        const item = gameData[currentCategory][currentIdx];
+        document.getElementById('cardIcon').textContent = item.icon || "🗣️";
+        document.getElementById('cardText').textContent = item.text;
+        document.getElementById('cardHint').textContent = item.hint || "Speak clearly!";
+        
+        // Reset Tools
+        fullTranscriptText = "";
+        document.getElementById('transcript').innerHTML = '<span class="transcript-placeholder">Click microphone to see your words...</span>';
+        stopListening();
+        audioUrl = null;
+        document.getElementById('playBtn').disabled = true;
+        document.getElementById('playBtn').style.opacity = 0.5;
+    }
+
+    // --- Speech Recognition (Magic Mirror) ---
+    function setupSpeech() {
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let newFinalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        newFinalTranscript += event.results[i][0].transcript + ' ';
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+                
+                if (newFinalTranscript) {
+                    fullTranscriptText += newFinalTranscript;
+                }
+
+                // Display accumulated text + current interim text
+                document.getElementById('transcript').textContent = fullTranscriptText + interimTranscript;
+            };
+
+            recognition.onerror = (e) => {
+                console.log("Speech Error", e);
+                // Don't overwrite if it's just a 'no-speech' error which happens frequently
+                if (e.error !== 'no-speech') {
+                    document.getElementById('transcript').textContent = "Microphone error (Check permissions)";
+                }
+            };
+        } else {
+            document.getElementById('listenBtn').style.display = 'none';
+        }
+    }
+
+    function toggleListening() {
+        const btn = document.getElementById('listenBtn');
+        if (btn.classList.contains('active')) {
+            stopListening();
+        } else {
+            startListening();
+        }
+    }
+
+    function startListening() {
+        if(recognition) {
+            try {
+                recognition.start();
+                document.getElementById('listenBtn').classList.add('active');
+                if (fullTranscriptText === "") {
+                    document.getElementById('transcript').textContent = "...";
+                }
+            } catch(e) { console.error(e); }
+        }
+    }
+
+    function stopListening() {
+        if(recognition) {
+            try { recognition.stop(); } catch(e){}
+            document.getElementById('listenBtn').classList.remove('active');
+        }
+    }
+    
+    function clearTranscript() {
+        fullTranscriptText = "";
+        document.getElementById('transcript').innerHTML = '<span class="transcript-placeholder">Click microphone to see your words...</span>';
+    }
+
+    function readTranscript() {
+        const text = document.getElementById('transcript').innerText;
+        if (!text || text.includes("Click microphone")) return;
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US';
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+    }
+
+    // --- Audio Recording ---
+    async function toggleRecording() {
+        const btn = document.getElementById('recordBtn');
+        if (btn.classList.contains('active')) {
+            // Stop
+            if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                mediaRecorder.stop();
+            }
+            btn.classList.remove('active');
+        } else {
+            // Start
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                // Use browser default mimeType for best support
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+                
+                mediaRecorder.onstop = () => {
+                    // Create blob from chunks
+                    const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType }); // Use actual mimeType
+                    // Release old URL to free memory
+                    if (audioUrl) URL.revokeObjectURL(audioUrl);
+                    audioUrl = URL.createObjectURL(audioBlob);
+                    
+                    document.getElementById('playBtn').disabled = false;
+                    document.getElementById('playBtn').style.opacity = 1;
+                };
+
+                mediaRecorder.start();
+                btn.classList.add('active');
+            } catch(e) {
+                console.error(e);
+                alert("Microphone access denied or not supported. Check browser settings.");
+            }
+        }
+    }
+
+    function playRecording() {
+        if (audioUrl) {
+            const audio = new Audio(audioUrl);
+            audio.play().catch(e => alert("Playback error: " + e.message));
+        }
+    }
+
+    // --- Timer Logic (Visual Modal) ---
+    function startTimer() {
+        // Copy current prompt to modal so student can still see it
+        document.getElementById('timerPromptCopy').textContent = document.getElementById('cardText').textContent;
+        
+        const display = document.getElementById('timerCount');
+        let timeLeft = 30;
+        display.textContent = timeLeft;
+        display.style.color = "var(--primary)";
+        
+        document.getElementById('timerModal').style.display = 'flex';
+        
+        if(timerIntervalVal) clearInterval(timerIntervalVal);
+        
+        timerIntervalVal = setInterval(() => {
+            timeLeft--;
+            display.textContent = timeLeft;
+            
+            if(timeLeft <= 5) {
+                display.style.color = "var(--danger)";
+            }
+            
+            if(timeLeft <= 0) {
+                clearInterval(timerIntervalVal);
+                display.textContent = "TIME'S UP!";
+            }
+        }, 1000);
+    }
+
+    window.stopTimer = function() { // Expose to window for HTML onclick
+        clearInterval(timerIntervalVal);
+        document.getElementById('timerModal').style.display = 'none';
+    }
+
+    // --- Scoring & Navigation ---
+    function finishTurn() {
+        stopListening();
+        document.getElementById('rateModal').style.display = 'flex';
+        // Reset stars visual
+        document.querySelectorAll('.star').forEach(s => s.classList.remove('active'));
+    }
+
+    function rate(stars) {
+        document.querySelectorAll('.star').forEach((s, i) => {
+            if(i < stars) s.classList.add('active');
+            else s.classList.remove('active');
+        });
+        
+        // Store temp score
+        window.tempStars = stars;
+    }
+
+    function nextCard() {
+        if(window.tempStars) {
+            totalStars += window.tempStars;
+            document.getElementById('scoreDisplay').textContent = totalStars;
+            confetti({ particleCount: 50 * window.tempStars, spread: 70, origin: { y: 0.6 } });
+            window.tempStars = 0;
+        }
+        
+        document.getElementById('rateModal').style.display = 'none';
+        
+        currentIdx++;
+        if(currentIdx >= gameData[currentCategory].length) currentIdx = 0; // Loop
+        loadCard();
+    }
+
+    // --- File Upload ---
+    window.handleFileUpload = function(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const text = e.target.result;
+                const newData = {};
+                let currentCat = "Custom";
+                
+                // Format: Category: Name \n Text | Hint
+                text.split(/\r?\n/).forEach(line => {
+                    line = line.trim();
+                    if(!line) return;
+                    if(line.toLowerCase().startsWith('category:')) {
+                        currentCat = line.split(':')[1].trim();
+                        newData[currentCat] = [];
+                    } else {
+                        const parts = line.split('|');
+                        const text = parts[0].trim();
+                        const hint = parts[1] ? parts[1].trim() : "Speak clearly";
+                        newData[currentCat].push({ text, hint, icon: "📄" });
+                    }
+                });
+                
+                if(Object.keys(newData).length > 0) {
+                    gameData = newData; // gameData is let
+                    currentCategory = Object.keys(gameData)[0];
+                    currentIdx = 0;
+                    init();
+                    alert("Prompts loaded!");
+                }
+            } catch(err) {
+                alert("Error parsing file");
+            }
+            input.value = '';
+        };
+        reader.readAsText(file);
+    }
+
+    init();
+</script>
+</body>
+</html>
